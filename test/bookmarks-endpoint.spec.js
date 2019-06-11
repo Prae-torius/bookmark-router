@@ -76,4 +76,56 @@ describe.only('Bookmarks Endpoints', function() {
       })
     })
   })
+
+  describe(`POST/bookmarks/`, function() {
+    it(`creates a bookmark, responding with 201 and the new bookmark`, () => {
+      const newBookmark = {
+        title: 'Test new bookmark',
+        url: 'www.test.com',
+        description: 'test description',
+        rating: 5
+      }
+
+      return supertest(app)
+        .post('/bookmarks')
+        .send(newBookmark)
+        .expect(201)
+        .expect(res => {
+          expect(res.body.title).to.eql(newBookmark.title)
+          expect(res.body.url).to.eql(newBookmark.url)
+          expect(res.body.description).to.eql(newBookmark.description)
+          expect(res.body.url).to.eql(newBookmark.url)
+        })
+        .then(res => 
+          supertest(app)
+            .get(`/bookmarks/${res.body.id}`)
+            .expect(res.body)
+        )
+    })
+  })
+
+  describe.only(`DELETE /bookmarks/:bookmarks_id`, () => {
+    context(`given there are bookmarks in the database`, () => {
+      const testBookmarks = makeBookmarksArray()
+
+      beforeEach('instert bookmarks', () => {
+        return db
+          .into('bookmarks')
+          .insert(testBookmarks)
+      })
+
+      it(`deletes a bookmark with the coresponding id and responds with 204`, () => {
+        const idToRemove = 2
+        const expectedBookmarks = testBookmarks.filter(bookmarks => bookmarks.id !== idToRemove)
+        return supertest(app)
+          .delete(`/bookmarks/${idToRemove}`)
+          .expect(204)
+          .then(res => {
+            supertest(app)
+            .get(`/bookmarks/`)
+            .expect(expectedBookmarks)
+          })
+      })
+    })
+  })
 })
