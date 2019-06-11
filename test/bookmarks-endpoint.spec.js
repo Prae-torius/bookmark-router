@@ -28,6 +28,8 @@ describe.only('Bookmarks Endpoints', function() {
         .expect(200, [])
       })
 
+    })
+
     context(`Given there are bookmarks in the db`, () => {
       const testBookmarks = makeBookmarksArray()
     
@@ -44,7 +46,6 @@ describe.only('Bookmarks Endpoints', function() {
       })
 
       
-      })
     })
   })
   
@@ -125,6 +126,15 @@ describe.only('Bookmarks Endpoints', function() {
             .get(`/bookmarks/`)
             .expect(expectedBookmarks)
           })
+      })
+    })
+
+    context(`Given there are no bookmarks`, () => {
+      it(`responds with 404`, () => {
+        const bookmarkId = 123456
+        return supertest(app)
+          .delete(`/bookmarks/${bookmarkId}`)
+          .expect(404, { error: { message: `Bookmark doesn't exist` } })
       })
     })
   })

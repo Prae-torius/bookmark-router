@@ -1,15 +1,15 @@
 const express = require('express')
 const logger = require('../logger')
-
+const xss = require('xss')
 const bookmarkRouter = express.Router()
 const jsonParser = express.json()
 const BookmarksService = require('./bookmarks-service')
 
 const serializeBookmark = bookmark => ({
   id: bookmark.id,
-  title: bookmark.title,
-  url: bookmark.url,
-  description: bookmark.description,
+  title: xss(bookmark.title),
+  url: xss(bookmark.url),
+  description: xss(bookmark.description),
   rating: bookmark.rating,
 })
 
@@ -19,13 +19,8 @@ bookmarkRouter
     const knexInstance = req.app.get('db')
     BookmarksService.getAllBookmarks(knexInstance)
       .then(bookmarks => {
-        res.json(bookmarks.map(bookmark => ({
-          id: bookmark.id,
-          title: bookmark.title,
-          url: bookmark.url,
-          description: bookmark.description,
-          rating: bookmark.rating
-        })))
+        res.json(bookmarks.map(bookmark => serializeBookmark(bookmark)
+        ))
       })
       .catch(next)
   })
@@ -65,28 +60,33 @@ bookmarkRouter
 
 bookmarkRouter
   .route('/bookmarks/:bookmark_id')
-  .get((req, res, next) => {
-    const knexInstance = req.app.get('db')
-    BookmarksService.getById(knexInstance, req.params.bookmark_id)
+  .all((req, res, next) => {
+    BookmarksService.getById(
+      req.app.get('db'), 
+      req.params.bookmark_id)
       .then(bookmark => {
         if (!bookmark) {
           return res.status(404).json({ 
             error: { message: `Bookmark doesn't exist` } 
           })
         }
-        res.json(bookmark)
+        res.bookmark = bookmark
+        next()
       })
       .catch(next)
-    })
+  })
+  .get((req, res, next) => {
+    res.json(serializeBookmark(res.bookmark))
+  })
   .delete((req, res, next) => {
-   BookmarksService.deleteBookmark(
-     req.app.get('db'),
-     req.params.bookmark_id
-   )
-    .then(() => {
-      res.status(204).end()
-    })
-    .catch(next)
+    BookmarksService.deleteBookmark(
+      req.app.get('db'),
+      req.params.bookmark_id
+    )
+      .then(() => {
+        res.status(204).end()
+      })
+      .catch(next)
   })
 
   module.exports = bookmarkRouter
